@@ -208,9 +208,9 @@ mod tests {
 
     #[test]
     fn test_render_prompt_right_with_usage() {
-        let usage = Usage { 
-            prompt_tokens: 10, 
-            completion_tokens: 20, 
+        let usage = Usage {
+            prompt_tokens: 10,
+            completion_tokens: 20,
             total_tokens: 30,
             estimated_tokens: None,
         };
@@ -285,9 +285,9 @@ mod tests {
 
     #[test]
     fn test_render_prompt_right_with_model() {
-        let usage = Usage { 
-            prompt_tokens: 10, 
-            completion_tokens: 20, 
+        let usage = Usage {
+            prompt_tokens: 10,
+            completion_tokens: 20,
             total_tokens: 30,
             estimated_tokens: None,
         };
