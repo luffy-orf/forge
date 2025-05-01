@@ -51,11 +51,18 @@ impl Info {
 
 impl From<&Usage> for Info {
     fn from(usage: &Usage) -> Self {
-        Info::new()
+        let mut info = Info::new()
             .add_title("Usage".to_string())
             .add_key_value("Prompt", usage.prompt_tokens)
             .add_key_value("Completion", usage.completion_tokens)
-            .add_key_value("Total", usage.total_tokens)
+            .add_key_value("Total Reported", usage.total_tokens);
+
+        // Add estimated tokens if available
+        if let Some(estimated) = usage.estimated_tokens {
+            info = info.add_key_value("Total Estimated", estimated);
+        }
+
+        info
     }
 }
 
@@ -100,7 +107,12 @@ impl From<&UIState> for Info {
         info = info
             .add_key_value("Prompt Tokens", value.usage.prompt_tokens)
             .add_key_value("Completion Tokens", value.usage.completion_tokens)
-            .add_key_value("Total Tokens", value.usage.total_tokens);
+            .add_key_value("Total Reported", value.usage.total_tokens);
+
+        // Add estimated tokens if available
+        if let Some(estimated) = value.usage.estimated_tokens {
+            info = info.add_key_value("Total Estimated", estimated);
+        }
 
         info
     }

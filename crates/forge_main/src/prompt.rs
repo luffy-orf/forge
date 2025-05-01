@@ -86,12 +86,18 @@ impl Prompt for ForgePrompt {
         }
 
         // Append usage info
-        let usage = self
+        let reported = self
             .usage
             .as_ref()
             .unwrap_or(&Usage::default())
             .total_tokens;
-        let _ = write!(result, "/{usage}");
+        let estimated = self
+            .usage
+            .as_ref()
+            .and_then(|u| u.estimated_tokens)
+            .unwrap_or(0);
+        let max_tokens = std::cmp::max(reported, estimated);
+        let _ = write!(result, "/{max_tokens}");
         let _ = write!(result, "]");
 
         // Apply styling once at the end
@@ -202,7 +208,12 @@ mod tests {
 
     #[test]
     fn test_render_prompt_right_with_usage() {
-        let usage = Usage { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 };
+        let usage = Usage { 
+            prompt_tokens: 10, 
+            completion_tokens: 20, 
+            total_tokens: 30,
+            estimated_tokens: None,
+        };
         let mut prompt = ForgePrompt::default();
         prompt.usage(usage);
 
@@ -271,9 +282,15 @@ mod tests {
             .to_string();
         assert_eq!(actual, expected);
     }
+
     #[test]
     fn test_render_prompt_right_with_model() {
-        let usage = Usage { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 };
+        let usage = Usage { 
+            prompt_tokens: 10, 
+            completion_tokens: 20, 
+            total_tokens: 30,
+            estimated_tokens: None,
+        };
         let mut prompt = ForgePrompt::default();
         prompt.usage(usage);
         prompt.model(ModelId::new("anthropic/claude-3"));
