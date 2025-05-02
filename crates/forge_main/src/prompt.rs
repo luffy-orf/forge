@@ -48,22 +48,21 @@ impl Prompt for ForgePrompt {
         let mut result = String::with_capacity(64); // Pre-allocate a reasonable size
 
         // Build the string step-by-step
-
-        let _ = write!(
+        write!(
             result,
             "{} {}",
             mode_style.paint(self.mode.to_string()),
             folder_style.paint(&current_dir)
-        );
+        ).unwrap();
 
         // Only append branch info if present
         if let Some(branch) = branch_opt {
             if branch != current_dir {
-                let _ = write!(result, " {} ", branch_style.paint(branch));
+                write!(result, " {} ", branch_style.paint(branch)).unwrap();
             }
         }
 
-        let _ = write!(result, "\n{} ", branch_style.paint(RIGHT_CHEVRON));
+        write!(result, "\n{} ", branch_style.paint(RIGHT_CHEVRON)).unwrap();
 
         Cow::Owned(result)
     }
@@ -73,7 +72,7 @@ impl Prompt for ForgePrompt {
         let mut result = String::with_capacity(32);
 
         // Start with bracket and version
-        let _ = write!(result, "[{VERSION}");
+        write!(result, "[{VERSION}").unwrap();
 
         // Append model if available
         if let Some(model) = self.model.as_ref() {
@@ -82,7 +81,7 @@ impl Prompt for ForgePrompt {
                 .split('/')
                 .next_back()
                 .unwrap_or_else(|| model.as_str());
-            let _ = write!(result, "/{formatted_model}");
+            write!(result, "/{formatted_model}").unwrap();
         }
 
         // Append usage info
@@ -91,14 +90,20 @@ impl Prompt for ForgePrompt {
             .as_ref()
             .unwrap_or(&Usage::default())
             .total_tokens;
+
         let estimated = self
             .usage
             .as_ref()
             .and_then(|u| u.estimated_tokens)
             .unwrap_or(0);
-        let max_tokens = std::cmp::max(reported, estimated);
-        let _ = write!(result, "/{max_tokens}");
-        let _ = write!(result, "]");
+
+        if estimated > reported {
+            write!(result, "/~{estimated}").unwrap();
+        } else {
+            write!(result, "/{reported}").unwrap();
+        }
+
+        write!(result, "]").unwrap();
 
         // Apply styling once at the end
         Cow::Owned(
@@ -131,13 +136,13 @@ impl Prompt for ForgePrompt {
 
         // Handle empty search term more elegantly
         if history_search.term.is_empty() {
-            let _ = write!(result, "({prefix}reverse-search) ");
+            write!(result, "({prefix}reverse-search) ").unwrap();
         } else {
-            let _ = write!(
+            write!(
                 result,
                 "({}reverse-search: {}) ",
                 prefix, history_search.term
-            );
+            ).unwrap();
         }
 
         Cow::Owned(Style::new().fg(Color::White).paint(&result).to_string())
