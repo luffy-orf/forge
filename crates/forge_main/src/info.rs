@@ -56,7 +56,7 @@ impl From<&Usage> for Info {
         let estimated = usage.estimated_tokens.unwrap_or(0);
 
         if estimated > usage.prompt_tokens {
-            info = info.add_key_value("Prompt", format!("~{}", estimated));
+            info = info.add_key_value("Prompt", format!("~{estimated}"));
         } else {
             info = info.add_key_value("Prompt", usage.prompt_tokens)
         }

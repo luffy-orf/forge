@@ -53,7 +53,8 @@ impl Prompt for ForgePrompt {
             "{} {}",
             mode_style.paint(self.mode.to_string()),
             folder_style.paint(&current_dir)
-        ).unwrap();
+        )
+        .unwrap();
 
         // Only append branch info if present
         if let Some(branch) = branch_opt {
@@ -142,7 +143,8 @@ impl Prompt for ForgePrompt {
                 result,
                 "({}reverse-search: {}) ",
                 prefix, history_search.term
-            ).unwrap();
+            )
+            .unwrap();
         }
 
         Cow::Owned(Style::new().fg(Color::White).paint(&result).to_string())
