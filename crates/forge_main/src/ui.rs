@@ -5,6 +5,8 @@ use forge_api::{
     AgentMessage, ChatRequest, ChatResponse, Conversation, ConversationId, Event, Model, ModelId,
     API,
 };
+use forge_domain::{Update, UpdateFrequency, Workflow};
+use merge::Merge;
 use forge_display::{MarkdownFormat, TitleFormat};
 use forge_fs::ForgeFS;
 use forge_spinner::SpinnerManager;
@@ -17,13 +19,12 @@ use serde_json::Value;
 use tokio_stream::StreamExt;
 use tracing::error;
 
-use crate::auto_update::update_forge;
 use crate::cli::Cli;
 use crate::info::Info;
 use crate::input::Console;
 use crate::model::{Command, ForgeCommandManager};
 use crate::state::{Mode, UIState};
-use crate::{banner, TRACKER};
+use crate::{banner, check_for_update, TRACKER};
 
 // Event type constants moved to UI layer
 pub const EVENT_USER_TASK_INIT: &str = "user_task_init";
@@ -163,7 +164,36 @@ impl<F: API> UI<F> {
         }
     }
 
+    async fn get_update_configuration(&self) -> Result<Update> {
+        println!("DEBUG: Getting update configuration");
+        let mut workflow = Workflow::default();
+        let user_workflow = self.api.read_workflow(self.cli.workflow.as_deref()).await?;
+        workflow.merge(user_workflow);
+
+        // Return default values if not set in the config
+        let mut update = workflow.updates.unwrap_or_default();
+        if update.check_frequency.is_none() {
+            update.check_frequency = Some(UpdateFrequency::Daily);
+        }
+        if update.auto_update.is_none() {
+            update.auto_update = Some(false);
+        }
+
+        println!("DEBUG: Update config: frequency={:?}, auto_update={:?}", 
+                 update.check_frequency, update.auto_update);
+        Ok(update)
+    }
+
     async fn run_inner(&mut self) -> Result<()> {
+        println!("DEBUG: Starting run_inner");
+        if let Ok(config) = self.get_update_configuration().await {
+            // Recurring update check.
+            println!("DEBUG: About to call check_for_update with config");
+            check_for_update(config.check_frequency.unwrap(), config.auto_update.unwrap()).await;
+        } else {
+            println!("DEBUG: Failed to get update configuration");
+        }
+
         // Check for dispatch flag first
         if let Some(dispatch_json) = self.cli.event.clone() {
             return self.handle_dispatch(dispatch_json).await;
@@ -240,9 +270,12 @@ impl<F: API> UI<F> {
                     let output = format_tools(&tools);
                     self.writeln(output)?;
                 }
+                Command::Update => {
+                    // One time update check
+                    println!("DEBUG: Update command received");
+                    check_for_update(UpdateFrequency::Never, false).await;
+                }
                 Command::Exit => {
-                    update_forge().await;
-
                     break;
                 }
 

@@ -1,13 +1,17 @@
 use std::process::Stdio;
+use std::time::Duration;
 
 use anyhow::Result;
+use colored::Colorize;
+use forge_domain::UpdateFrequency;
 use forge_tracker::{EventKind, VERSION};
 use tokio::process::Command;
+use update_informer::{registry, Check, Version};
 
 use crate::TRACKER;
 
 /// Runs npm update in the background, failing silently
-pub async fn update_forge() {
+async fn update_forge() {
     // Check if version is development version, in which case we skip the update
     if VERSION.contains("dev") || VERSION == "0.1.0" {
         // Skip update for development version 0.1.0
@@ -19,6 +23,72 @@ pub async fn update_forge() {
         // Send an event to the tracker on failure
         // We don't need to handle this result since we're failing silently
         let _ = send_update_failure_event(&format!("Auto update failed: {err}")).await;
+    } else {
+        let answer = inquire::Confirm::new("Restart forge to apply the update?")
+            .with_default(true)
+            .with_error_message("Invalid response!")
+            .prompt();
+        if answer.is_ok() && answer.unwrap() {
+            std::process::exit(0);
+        }
+    }
+}
+
+/// Prompts the user to confirm updating to the latest version
+async fn confirm_update(version: Version) {
+    let answer = inquire::Confirm::new(&format!(
+        "Forge update available\nCurrent version: {}\tLatest: {}\n\nWould you like to update now?",
+        format!("v{VERSION}").bold().white(),
+        version.to_string().bold().white()
+    ))
+    .with_default(true)
+    .with_error_message("Invalid response!")
+    .prompt();
+
+    if answer.is_ok() && answer.unwrap() {
+        update_forge().await;
+    }
+}
+
+/// Checks if there is an update available
+pub async fn check_for_update(frequency: UpdateFrequency, auto_update: bool) {
+    // Check if version is development version, in which case we skip the update check
+    if VERSION.contains("dev") || VERSION == "0.1.0" {
+        // Skip update for development version 0.1.0
+        println!("DEBUG: Skipping update check for development version");
+        return;
+    }
+
+    println!("DEBUG: Checking for updates with frequency: {:?}, auto_update: {}", frequency, auto_update);
+    
+    // If we're using a test version (like 0.79.0), force a check regardless of frequency
+    let is_test_version = VERSION != "0.1.0" && !VERSION.starts_with("0.8");
+    
+    let informer = if is_test_version {
+        println!("DEBUG: Using test version, forcing update check");
+        update_informer::new(registry::Npm, "@antinomyhq/forge", VERSION).interval(Duration::ZERO)
+    } else {
+        update_informer::new(registry::Npm, "@antinomyhq/forge", VERSION).interval(
+            match frequency {
+                UpdateFrequency::Daily => Duration::from_secs(60 * 60 * 24), // 1 day
+                UpdateFrequency::Weekly => Duration::from_secs(60 * 60 * 24 * 7), // 1 week
+                UpdateFrequency::Never => Duration::ZERO,                    // one time
+            },
+        )
+    };
+
+    println!("DEBUG: About to check version");
+    match informer.check_version() {
+        Ok(Some(version)) => {
+            println!("DEBUG: Update available: {}", version);
+            if auto_update {
+                update_forge().await;
+            } else {
+                confirm_update(version).await;
+            }
+        }
+        Ok(None) => println!("DEBUG: No update available or already checked recently"),
+        Err(e) => println!("DEBUG: Error checking for updates: {:?}", e),
     }
 }
 
