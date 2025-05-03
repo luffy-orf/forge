@@ -165,7 +165,6 @@ impl<F: API> UI<F> {
     }
 
     async fn get_update_configuration(&self) -> Result<Update> {
-        println!("DEBUG: Getting update configuration");
         let mut workflow = Workflow::default();
         let user_workflow = self.api.read_workflow(self.cli.workflow.as_deref()).await?;
         workflow.merge(user_workflow);
@@ -179,19 +178,13 @@ impl<F: API> UI<F> {
             update.auto_update = Some(false);
         }
 
-        println!("DEBUG: Update config: frequency={:?}, auto_update={:?}", 
-                 update.check_frequency, update.auto_update);
         Ok(update)
     }
 
     async fn run_inner(&mut self) -> Result<()> {
-        println!("DEBUG: Starting run_inner");
         if let Ok(config) = self.get_update_configuration().await {
             // Recurring update check.
-            println!("DEBUG: About to call check_for_update with config");
             check_for_update(config.check_frequency.unwrap(), config.auto_update.unwrap()).await;
-        } else {
-            println!("DEBUG: Failed to get update configuration");
         }
 
         // Check for dispatch flag first
@@ -272,7 +265,6 @@ impl<F: API> UI<F> {
                 }
                 Command::Update => {
                     // One time update check
-                    println!("DEBUG: Update command received");
                     check_for_update(UpdateFrequency::Never, false).await;
                 }
                 Command::Exit => {

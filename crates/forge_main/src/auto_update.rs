@@ -55,17 +55,13 @@ pub async fn check_for_update(frequency: UpdateFrequency, auto_update: bool) {
     // Check if version is development version, in which case we skip the update check
     if VERSION.contains("dev") || VERSION == "0.1.0" {
         // Skip update for development version 0.1.0
-        println!("DEBUG: Skipping update check for development version");
         return;
     }
-
-    println!("DEBUG: Checking for updates with frequency: {:?}, auto_update: {}", frequency, auto_update);
     
     // If we're using a test version (like 0.79.0), force a check regardless of frequency
     let is_test_version = VERSION != "0.1.0" && !VERSION.starts_with("0.8");
     
     let informer = if is_test_version {
-        println!("DEBUG: Using test version, forcing update check");
         update_informer::new(registry::Npm, "@antinomyhq/forge", VERSION).interval(Duration::ZERO)
     } else {
         update_informer::new(registry::Npm, "@antinomyhq/forge", VERSION).interval(
@@ -77,18 +73,12 @@ pub async fn check_for_update(frequency: UpdateFrequency, auto_update: bool) {
         )
     };
 
-    println!("DEBUG: About to check version");
-    match informer.check_version() {
-        Ok(Some(version)) => {
-            println!("DEBUG: Update available: {}", version);
-            if auto_update {
-                update_forge().await;
-            } else {
-                confirm_update(version).await;
-            }
+    if let Some(version) = informer.check_version().ok().flatten() {
+        if auto_update {
+            update_forge().await;
+        } else {
+            confirm_update(version).await;
         }
-        Ok(None) => println!("DEBUG: No update available or already checked recently"),
-        Err(e) => println!("DEBUG: Error checking for updates: {:?}", e),
     }
 }
 
