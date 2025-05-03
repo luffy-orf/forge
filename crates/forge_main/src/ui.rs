@@ -5,15 +5,15 @@ use forge_api::{
     AgentMessage, ChatRequest, ChatResponse, Conversation, ConversationId, Event, Model, ModelId,
     API,
 };
-use forge_domain::{Update, UpdateFrequency, Workflow};
-use merge::Merge;
 use forge_display::{MarkdownFormat, TitleFormat};
+use forge_domain::{Update, UpdateFrequency, Workflow};
 use forge_fs::ForgeFS;
 use forge_spinner::SpinnerManager;
 use forge_tracker::ToolCallPayload;
 use inquire::error::InquireError;
 use inquire::ui::{RenderConfig, Styled};
 use inquire::Select;
+use merge::Merge;
 use serde::Deserialize;
 use serde_json::Value;
 use tokio_stream::StreamExt;

@@ -52,15 +52,17 @@ async fn confirm_update(version: Version) {
 
 /// Checks if there is an update available
 pub async fn check_for_update(frequency: UpdateFrequency, auto_update: bool) {
-    // Check if version is development version, in which case we skip the update check
+    // Check if version is development version, in which case we skip the update
+    // check
     if VERSION.contains("dev") || VERSION == "0.1.0" {
         // Skip update for development version 0.1.0
         return;
     }
-    
-    // If we're using a test version (like 0.79.0), force a check regardless of frequency
+
+    // If we're using a test version (like 0.79.0), force a check regardless of
+    // frequency
     let is_test_version = VERSION != "0.1.0" && !VERSION.starts_with("0.8");
-    
+
     let informer = if is_test_version {
         update_informer::new(registry::Npm, "@antinomyhq/forge", VERSION).interval(Duration::ZERO)
     } else {

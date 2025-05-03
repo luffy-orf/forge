@@ -68,7 +68,7 @@ pub struct Workflow {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[merge(strategy = crate::merge::option)]
     pub tool_supported: Option<bool>,
-    
+
     /// Configurations that can be used to update forge
     #[merge(strategy = crate::update::update_config)]
     #[serde(skip_serializing_if = "Option::is_none")]

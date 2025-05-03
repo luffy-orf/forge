@@ -40,4 +40,4 @@ pub fn update_config(base: &mut Option<Update>, other: Option<Update>) {
         // Apply merged config to the base config
         *base = Some(update);
     }
-} 
+}
