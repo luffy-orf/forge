@@ -6,6 +6,7 @@ use bytes::Bytes;
 use forge_display::{DiffFormat, TitleFormat};
 use forge_domain::{
     EnvironmentService, ExecutableTool, NamedTool, ToolCallContext, ToolDescription, ToolName,
+    ToolResponseData,
 };
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
@@ -275,20 +276,19 @@ impl<F: Infrastructure> ExecutableTool for ApplyPatchJson<F> {
             .write(path, Bytes::from(current_content.clone()))
             .await?;
 
-        let mut result = String::new();
+        // Create a structured response using ToolResponseData
+        let tool_data = ToolResponseData::patch(path.display().to_string())
+            .with_total_chars(current_content.len());
+        
+        // Add warning if there are syntax issues
+        let tool_data = if let Some(warning) = syn::validate(path, &current_content).map(|e| e.to_string()) {
+            tool_data.with_warning(warning)
+        } else {
+            tool_data
+        };
 
-        writeln!(result, "---")?;
-        writeln!(result, "path: {}", path.display())?;
-        writeln!(result, "total_chars: {}", current_content.len())?;
-
-        // Check for syntax errors
-        if let Some(warning) = syn::validate(path, &current_content).map(|e| e.to_string()) {
-            writeln!(result, "warning:{warning}")?;
-        }
-
-        writeln!(result, "---")?;
-
-        writeln!(result, "{}", console::strip_ansi_codes(&diff).as_ref())?;
+        // Generate the diff as the content
+        let diff_content = console::strip_ansi_codes(&diff).to_string();
 
         context
             .send_text(format!(
@@ -300,8 +300,8 @@ impl<F: Infrastructure> ExecutableTool for ApplyPatchJson<F> {
         // Output diff either to sender or println
         context.send_text(diff).await?;
 
-        // Return the final result
-        Ok(result)
+        // Return the final result using ToolResponseData
+        Ok(tool_data.to_front_matter(diff_content))
     }
 }
 

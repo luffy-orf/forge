@@ -14,20 +14,13 @@ pub struct ToolCallRecord {
     pub tool_result: ToolResult,
 }
 
-/// Formats the CallRecord as XML with tool name, arguments, and result
+/// Formats the CallRecord as either Front Matter (preferred) or XML (legacy) based on whether
+/// ToolResponseData is available
 impl Display for ToolCallRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let tag = if self.tool_result.is_error {
-            "error"
-        } else {
-            "success"
-        };
-        let content = &self.tool_result.content;
-        let tool_name = self.tool_call.name.as_str();
-        writeln!(f, r#"<forge_tool_result tool_name="{tool_name}">"#,)?;
-        writeln!(f, r#"<{tag}>{content}</{tag}>"#,)?;
-        writeln!(f, r#"</forge_tool_result>"#,)?;
-        Ok(())
+        // Delegate to the ToolResult's Display implementation, which already handles
+        // the decision between front matter and XML format
+        write!(f, "{}", self.tool_result)
     }
 }
 
